@@ -1,3 +1,4 @@
+const { response } = require("express");
 const express = require("express");
 const { v4: uuidv4 } = require("uuid");
 const app = express();
@@ -25,7 +26,7 @@ function getBalance(statement) {
     if (operation.type === "credit") {
       return acc + operation.amount;
     } else {
-      acc - operation.amount;
+      return acc - operation.amount;
     }
   }, 0);
 
@@ -67,7 +68,7 @@ app.post("/deposit", verifyIfExistsAccountCPF, (request, response) => {
   const statementOperation = {
     description,
     amount,
-    createt_at: new Date(),
+    created_at: new Date(),
     type: "credit",
   };
 
@@ -88,7 +89,7 @@ app.post("/withdraw", verifyIfExistsAccountCPF, (request, response) => {
 
   const statementOperation = {
     amount,
-    createt_at: new Date(),
+    created_at: new Date(),
     type: "debit",
   };
 
@@ -97,6 +98,48 @@ app.post("/withdraw", verifyIfExistsAccountCPF, (request, response) => {
   return response.status(201).send();
 
 });
+
+app.get("/statement/date", verifyIfExistsAccountCPF, (request, response) => {
+  const { customer } = request; // request vindo do middleware verifyIfExistsAccountCPF
+
+  const { date } = request.query;
+
+  const dateFormat = new Date(date + " 00:00"); // horario da busca zerado pra trazer de todo o dia
+
+  const statement = customer.statement.filter((statement) => statement.created_at.toDateString() === new Date(dateFormat).toDateString())
+
+  return response.json(statement);
+}); 
+
+app.put("/account", verifyIfExistsAccountCPF, (request, response) => {
+  const { name } = request.body;
+  const { customer } = request;
+
+  customer.name = name;
+
+  return response.status(201).send()
+})
+
+app.get("/account", verifyIfExistsAccountCPF, (request, response) => {
+  const { customer } = request;
+  return response.json(customer)
+})
+
+app.delete("/account", verifyIfExistsAccountCPF, (request, response) => {
+  const { customer } = request;
+
+  customers.splice(customer, 1);
+
+  return response.status(200).json(customers)
+})
+
+app.get("/balance", verifyIfExistsAccountCPF, (request, response) => {
+  const { customer } = request;
+
+  const balance = getBalance(customer.statement);
+
+  return response.json(balance);
+})
 
 app.listen(3333, () => {
   console.log("SERVER IS RUNNING!");
